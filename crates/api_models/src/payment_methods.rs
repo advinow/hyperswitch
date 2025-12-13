@@ -3209,6 +3209,11 @@ pub struct PaymentMethodSessionResponse {
     /// The token-id created if there is tokenization_data present
     #[schema(value_type = Option<String>, example = "12345_tok_01926c58bc6e77c09e809964e72af8c8")]
     pub associated_token_id: Option<id_type::GlobalTokenId>,
+
+    /// The payment method ID that was created during this session confirmation
+    /// This can be used with the proxy endpoint using token_type: "payment_method_id"
+    #[schema(value_type = Option<String>, example = "12345_pm_01926c58bc6e77c09e809964e72af8c8")]
+    pub associated_payment_method_id: Option<id_type::GlobalPaymentMethodId>,
 }
 
 #[cfg(feature = "v2")]

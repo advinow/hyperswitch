@@ -1,7 +1,7 @@
 FROM rust:bookworm as builder
 
 ARG EXTRA_FEATURES=""
-ARG VERSION_FEATURE_SET="v1"
+ARG VERSION_FEATURE_SET="v2"
 
 RUN apt-get update \
     && apt-get install -y libpq-dev libssl-dev pkg-config protobuf-compiler
