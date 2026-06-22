@@ -1,4 +1,4 @@
-FROM rust:bookworm as builder
+FROM public.ecr.aws/docker/library/rust:trixie as builder
 
 ARG EXTRA_FEATURES=""
 ARG VERSION_FEATURE_SET="v2"
@@ -40,7 +40,7 @@ RUN cargo build \
 
 
 
-FROM debian:bookworm
+FROM public.ecr.aws/docker/library/debian:trixie
 
 # Placing config and binary executable in different directories
 ARG CONFIG_DIR=/local/config
@@ -69,7 +69,7 @@ ENV TZ=Etc/UTC \
     CONFIG_DIR=${CONFIG_DIR} \
     SCHEDULER_FLOW=${SCHEDULER_FLOW} \
     BINARY=${BINARY} \
-    RUST_MIN_STACK=4194304
+    RUST_MIN_STACK=6291456
 
 RUN mkdir -p ${BIN_DIR}
 
