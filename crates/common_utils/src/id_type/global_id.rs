@@ -14,7 +14,10 @@ use error_stack::ResultExt;
 use thiserror::Error;
 
 use crate::{
-    consts::{CELL_IDENTIFIER_LENGTH, MAX_GLOBAL_ID_LENGTH, MIN_GLOBAL_ID_LENGTH},
+    consts::{
+        CELL_IDENTIFIER_LENGTH, LEGACY_CELL_IDENTIFIER_LENGTH, MAX_GLOBAL_ID_LENGTH,
+        MIN_GLOBAL_ID_LENGTH,
+    },
     errors, generate_time_ordered_id,
     id_type::{AlphaNumericId, AlphaNumericIdError, LengthId, LengthIdError},
 };
@@ -68,7 +71,7 @@ impl GlobalEntity {
 
 /// Cell identifier for an instance / deployment of application
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
-pub struct CellId(LengthId<CELL_IDENTIFIER_LENGTH, CELL_IDENTIFIER_LENGTH>);
+pub struct CellId(LengthId<LEGACY_CELL_IDENTIFIER_LENGTH, CELL_IDENTIFIER_LENGTH>);
 
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum CellIdError {
@@ -258,7 +261,7 @@ mod global_id_tests {
     #[test]
     fn test_global_id_deser_error() {
         let input_string_for_serde_json_conversion =
-            r#""123_45_cus_abcdefghijklmnopqrstuvwxyz1234567890""#;
+            r#""1_2345_cus_abcdefghijklmnopqrstuvwxyz1234567890""#;
 
         let global_id = serde_json::from_str::<GlobalId>(input_string_for_serde_json_conversion);
         assert!(global_id.is_err());
@@ -269,5 +272,16 @@ mod global_id_tests {
 
         let error_message = global_id.unwrap_err().to_string();
         assert_eq!(error_message, expected_error_message);
+    }
+
+    #[test]
+    fn test_global_id_accepts_legacy_cell_id() {
+        let input_string = "12345_cus_abcdefghijklmnopqrstuvwxyz1234567890";
+
+        let global_id = GlobalId::from_string(input_string.into()).expect("legacy cell id");
+
+        assert_eq!(global_id.get_string_repr(), input_string);
+        assert!(CellId::from_string("12345").is_ok());
+        assert!(CellId::from_string("123456").is_err());
     }
 }
