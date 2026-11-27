@@ -120,6 +120,10 @@ pub const MIN_REQUIRED_MERCHANT_REFERENCE_ID_LENGTH: u8 = 1;
 /// Length of a cell identifier in a distributed system
 pub const CELL_IDENTIFIER_LENGTH: u8 = 2;
 
+/// Longest cell identifier accepted, so global ids created with the 5 character cell ids used
+/// before cell ids were limited to 2 characters (e.g. `12345_pm_...`) stay valid
+pub const LEGACY_CELL_IDENTIFIER_LENGTH: u8 = 5;
+
 /// General purpose base64 engine
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 /// General purpose base64 engine standard nopad

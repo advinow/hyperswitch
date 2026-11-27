@@ -38,6 +38,99 @@ pub use superposition_types::api::{
     config::ContextPayload as ResolveConfigBody, context::PutRequest as ContextPutRequest,
 };
 
+/// AdviNow: Superposition file fallback that serves configuration only.
+///
+/// `superposition_provider` 0.120 refuses to initialise when the primary (HTTP) experiment
+/// fetch fails and the fallback does not serve experiments, which the file source never does.
+/// Without a reachable Superposition server the router would not start, even with
+/// `backup_file_path` set. This wrapper delegates every call to the file source and answers
+/// experiment fetches with `NotModified` (no experiments), which restores the 0.115 behaviour:
+/// configuration from the file, no experiments until the HTTP source answers.
+struct ConfigOnlyFileFallback(superposition_provider::data_source::file::FileDataSource);
+
+#[async_trait::async_trait]
+impl superposition_provider::data_source::SuperpositionDataSource for ConfigOnlyFileFallback {
+    async fn fetch_config(
+        &self,
+        if_modified_since: Option<chrono::DateTime<chrono::Utc>>,
+    ) -> superposition_provider::types::Result<
+        superposition_provider::data_source::FetchResponse<superposition_provider::ConfigData>,
+    > {
+        superposition_provider::data_source::SuperpositionDataSource::fetch_config(
+            &self.0,
+            if_modified_since,
+        )
+        .await
+    }
+
+    async fn fetch_filtered_config(
+        &self,
+        context: Option<Map<String, serde_json::Value>>,
+        prefix_filter: Option<Vec<String>>,
+        exclude_prefix_filter: Option<Vec<String>>,
+        if_modified_since: Option<chrono::DateTime<chrono::Utc>>,
+    ) -> superposition_provider::types::Result<
+        superposition_provider::data_source::FetchResponse<superposition_provider::ConfigData>,
+    > {
+        superposition_provider::data_source::SuperpositionDataSource::fetch_filtered_config(
+            &self.0,
+            context,
+            prefix_filter,
+            exclude_prefix_filter,
+            if_modified_since,
+        )
+        .await
+    }
+
+    async fn fetch_active_experiments(
+        &self,
+        _if_modified_since: Option<chrono::DateTime<chrono::Utc>>,
+    ) -> superposition_provider::types::Result<
+        superposition_provider::data_source::FetchResponse<superposition_provider::ExperimentData>,
+    > {
+        Ok(superposition_provider::data_source::FetchResponse::NotModified)
+    }
+
+    async fn fetch_candidate_active_experiments(
+        &self,
+        _context: Option<Map<String, serde_json::Value>>,
+        _prefix_filter: Option<Vec<String>>,
+        _exclude_prefix_filter: Option<Vec<String>>,
+        _if_modified_since: Option<chrono::DateTime<chrono::Utc>>,
+    ) -> superposition_provider::types::Result<
+        superposition_provider::data_source::FetchResponse<superposition_provider::ExperimentData>,
+    > {
+        Ok(superposition_provider::data_source::FetchResponse::NotModified)
+    }
+
+    async fn fetch_matching_active_experiments(
+        &self,
+        _context: Option<Map<String, serde_json::Value>>,
+        _prefix_filter: Option<Vec<String>>,
+        _exclude_prefix_filter: Option<Vec<String>>,
+        _if_modified_since: Option<chrono::DateTime<chrono::Utc>>,
+    ) -> superposition_provider::types::Result<
+        superposition_provider::data_source::FetchResponse<superposition_provider::ExperimentData>,
+    > {
+        Ok(superposition_provider::data_source::FetchResponse::NotModified)
+    }
+
+    fn supports_experiments(&self) -> bool {
+        true
+    }
+
+    fn watch(
+        &self,
+    ) -> superposition_provider::types::Result<Option<superposition_provider::types::WatchStream>>
+    {
+        superposition_provider::data_source::SuperpositionDataSource::watch(&self.0)
+    }
+
+    async fn close(&self) -> superposition_provider::types::Result<()> {
+        superposition_provider::data_source::SuperpositionDataSource::close(&self.0).await
+    }
+}
+
 pub use self::types::{ConfigContext, SuperpositionClientConfig, SuperpositionError, ToDocument};
 use crate::config_metrics;
 
@@ -770,7 +863,7 @@ impl SuperpositionClient {
                     Ok(source) => {
                         let boxed: Box<
                             dyn superposition_provider::data_source::SuperpositionDataSource,
-                        > = Box::new(source);
+                        > = Box::new(ConfigOnlyFileFallback(source));
                         Some(boxed)
                     }
                     Err(e) => {
